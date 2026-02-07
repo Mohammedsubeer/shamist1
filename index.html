@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Photo Frame</title>
+  <title>AR Video Frame</title>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -10,49 +10,174 @@
   <!-- MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    /* Bottom Indicator */
+    .indicator {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 10px 18px;
+      border-radius: 20px;
+      color: white;
+      font-size: 14px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(5px);
+    }
+
+    /* Tap to Unmute Overlay */
+    #tap-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      color: white;
+      font-size: 18px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #tap-overlay div {
+      background: rgba(0,0,0,0.8);
+      padding: 20px 30px;
+      border-radius: 30px;
+    }
   </style>
 </head>
 
 <body>
 
+<!-- Loading -->
+<div id="loading-screen">
+  <i class="fas fa-spinner fa-spin"></i>
+  <p style="margin-top:10px;">MagicFrames By fotoMagic</p>
+</div>
+
+<!-- Status -->
+<div class="indicator hidden" id="indicator">
+  <i class="fas fa-camera"></i> Scan the image
+</div>
+
+<!-- Tap to Unmute -->
+<div id="tap-overlay" class="hidden">
+  <div>
+    <i class="fas fa-volume-up"></i><br><br>
+    Tap to enable sound
+  </div>
+</div>
+
+<!-- AR Scene -->
 <a-scene
   mindar-image="imageTargetSrc: targets.mind;"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false"
+  loading-screen="enabled:false">
 
   <a-assets>
-    <video id="arVideo" src="WhatsApp Video 2026-02-07 at 1.22.54 PM.mp4" loop playsinline crossorigin="anonymous"></video>
+    <video
+      id="arVideo"
+      src="WhatsApp Video 2026-02-07 at 1.22.54 PM.mp4"
+      loop
+      muted
+      playsinline
+      crossorigin="anonymous"
+      preload="auto">
+    </video>
   </a-assets>
 
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
   <a-entity mindar-image-target="targetIndex: 0">
-    
-<a-video
-  src="#arVideo"
-  width="1.09"
-  height="1.09"
-  position="0 0 0">
-</a-video>
-
-
-
+    <a-video
+      src="#arVideo"
+      width="1.09"
+      height="1.09"
+      position="0 0 0"
+      visible="false">
+    </a-video>
   </a-entity>
 
 </a-scene>
 
 <script>
-  const video = document.querySelector("#arVideo");
+  const video = document.getElementById("arVideo");
+  const videoPlane = document.querySelector("a-video");
   const scene = document.querySelector("a-scene");
+  const indicator = document.getElementById("indicator");
+  const tapOverlay = document.getElementById("tap-overlay");
+  const loading = document.getElementById("loading-screen");
 
-  scene.addEventListener("targetFound", () => {
-    video.play();
+  let isPlaying = false;
+
+  // Target Found
+  scene.addEventListener("targetFound", async () => {
+    indicator.classList.remove("hidden");
+    indicator.innerHTML = '<i class="fas fa-play"></i> Playing video';
+
+    videoPlane.setAttribute("visible", "true");
+    video.muted = true;
+
+    try {
+      await video.play();
+      isPlaying = true;
+      tapOverlay.classList.remove("hidden");
+    } catch (e) {
+      console.log("Autoplay blocked:", e);
+    }
   });
 
+  // Target Lost
   scene.addEventListener("targetLost", () => {
     video.pause();
+    videoPlane.setAttribute("visible", "false");
+    indicator.classList.add("hidden");
+    tapOverlay.classList.add("hidden");
+    isPlaying = false;
+  });
+
+  // Tap to Unmute (REQUIRED FOR iPHONE)
+  tapOverlay.addEventListener("click", () => {
+    video.muted = false;
+    tapOverlay.classList.add("hidden");
+  });
+
+  // Init
+  window.addEventListener("load", () => {
+    setTimeout(() => loading.classList.add("hidden"), 1200);
   });
 </script>
 
